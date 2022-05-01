@@ -4,9 +4,9 @@ import com.example.appointmentservice.exceptions.DuplicateAppointmentException;
 import com.example.appointmentservice.exceptions.NotFoundException;
 import com.example.appointmentservice.models.Appointment;
 import com.example.appointmentservice.models.User;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -18,8 +18,11 @@ import java.util.stream.Stream;
 @Service
 public class AppointmentServiceImpl implements AppointmentService {
     private final List<Appointment> appointments;
+    private final UserCircuitService userCircuitService;
 
-    public AppointmentServiceImpl() {
+    @Autowired
+    public AppointmentServiceImpl(UserCircuitService userCircuitService) {
+        this.userCircuitService = userCircuitService;
         appointments = getAppointments(false);
     }
 
@@ -27,21 +30,23 @@ public class AppointmentServiceImpl implements AppointmentService {
         if (empty) {
             return new ArrayList<>();
         }
+        User carOwner = userCircuitService.getById("e9367753-f2b0-4537-b200-86f55711656f");
         return Stream.of(
-
                 Appointment.builder()
                         .id(UUID.randomUUID().toString())
-                        .car("Alfa Romeo")
+                        .car("Mazda 6")
                         .startDate(LocalDateTime.now())
                         .endDate(LocalDateTime.now().plusHours(2))
-                        .carOwner(User.builder()
-                                .id(UUID.randomUUID().toString())
-                                .email("test@mail.com")
-                                .address("Brasov")
-                                .firstName("Ionut")
-                                .lastName("Gica")
-                                .type("car owner")
-                                .build())
+//                        .carOwner(User.builder()
+//                                .id(UUID.randomUUID().toString())
+//                                .email("test@mail.com")
+//                                .address("Brasov")
+//                                .firstName("Ionut")
+//                                .lastName("Gica")
+//                                .type("car owner")
+//                                .build())
+                        .carOwner(carOwner)
+                        .carOwnerId(carOwner.getId())
                         .build()
         ).collect(Collectors.toList());
     }
@@ -83,7 +88,14 @@ public class AppointmentServiceImpl implements AppointmentService {
         result.setCar(appointment.getCar());
         result.setStartDate(appointment.getStartDate());
         result.setEndDate(appointment.getEndDate());
-        result.setCarOwner(appointment.getCarOwner());
+
+        if (appointment.getCarOwner() == null) {
+            result.setCarOwnerId(appointment.getCarOwnerId());
+            result.setCarOwner(userCircuitService.getById(appointment.getCarOwnerId()));
+        } else {
+            result.setCarOwner(appointment.getCarOwner());
+            result.setCarOwnerId(appointment.getCarOwner().getId());
+        }
 
         return result;
     }
